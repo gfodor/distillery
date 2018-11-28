@@ -714,18 +714,31 @@ defmodule Mix.Releases.Assembler do
 
   # Generates .boot script
   defp make_boot_script(%Release{profile: %Profile{output_dir: output_dir}} = release, rel_dir) do
-    Logger.debug "Generating boot script"
-    erts_lib_dir = case release.profile.include_erts do
-                     false -> :code.lib_dir()
-                     true  -> :code.lib_dir()
-                     p     -> String.to_charlist(Path.expand(Path.join(p, "lib")))
-                   end
-    options = [{:path, ['#{rel_dir}' | Release.get_code_paths(release)]},
-               {:outdir, '#{rel_dir}'},
-               {:variables, [{'ERTS_LIB_DIR', erts_lib_dir}]},
-               :no_warn_sasl,
-               :no_module_tests,
-               :silent]
+    Logger.debug("Generating boot script")
+
+    erts_lib_dir =
+      case release.profile.include_erts do
+        false -> :code.lib_dir()
+        true -> :code.lib_dir()
+        p -> String.to_charlist(Path.expand(Path.join(p, "lib")))
+      end
+
+    options = [
+      {:path, ['#{rel_dir}' | Release.get_code_paths(release)]},
+      {:outdir, '#{rel_dir}'},
+      {:variables, [{'ERTS_LIB_DIR', erts_lib_dir}]},
+      :no_warn_sasl,
+      :no_module_tests,
+      :silent
+    ]
+
+    options =
+      if release.profile.no_dot_erlang do
+        [:no_dot_erlang | options]
+      else
+        options
+      end
+
     rel_name = '#{release.name}'
     release_file = Path.join(rel_dir, "#{release.name}.rel")
     case :systools.make_script(rel_name, options) do
